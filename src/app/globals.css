@@ -180,7 +180,19 @@ body {
 .bkly-article { max-width: 720px; margin: 0 auto; padding: 56px 24px; }
 .bkly-article h1 { font-family: var(--font-display); font-size: 36px; font-weight: 700; color: var(--ink); line-height: 1.15; text-wrap: balance; }
 .bkly-article__meta { color: var(--muted); font-size: 14px; margin: 8px 0 28px; }
-.bkly-article__body { font-size: 17px; line-height: 1.75; color: var(--body); white-space: pre-wrap; }
+.bkly-article__body { font-size: 17px; line-height: 1.75; color: var(--body); }
+.bkly-article__body h2 { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1.25; margin: 36px 0 12px; }
+.bkly-article__body h3 { font-size: 21px; font-weight: 700; color: var(--ink); margin: 28px 0 10px; }
+.bkly-article__body h4 { font-size: 18px; font-weight: 600; color: var(--ink); margin: 22px 0 8px; }
+.bkly-article__body p { margin: 0 0 18px; }
+.bkly-article__body ul, .bkly-article__body ol { margin: 0 0 18px; padding-inline-start: 24px; }
+.bkly-article__body li { margin: 6px 0; }
+.bkly-article__body a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.bkly-article__body strong { color: var(--ink); font-weight: 700; }
+.bkly-article__body code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; background: var(--field); padding: 2px 6px; border-radius: var(--radius-sm); }
+.bkly-article__body blockquote { margin: 0 0 18px; padding: 4px 18px; border-inline-start: 3px solid var(--accent); color: var(--muted); font-style: italic; }
+.bkly-md__pre { background: var(--field); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; }
+.bkly-md__pre code { background: none; padding: 0; font-size: 14px; line-height: 1.6; }
 
 /* ── Section réservation (widget monté côté client) ──────────────────────── */
 .bkly-reserve { max-width: 1040px; margin: 0 auto; padding: 48px 24px; }
