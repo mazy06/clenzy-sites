@@ -144,6 +144,13 @@ body {
 .bkly-property-card__body { padding: 14px; }
 .bkly-property-card__line { height: 12px; width: 70%; border-radius: 4px; background: var(--line-2); }
 .bkly-property-card__line--sub { height: 10px; width: 45%; background: var(--line); margin-top: 8px; }
+/* Cartes réelles cliquables (lien interne → fiche logement) */
+a.bkly-property-card { display: block; text-decoration: none; color: inherit; cursor: pointer; transition: border-color 180ms ease, box-shadow 180ms ease; }
+a.bkly-property-card:hover { border-color: var(--accent); box-shadow: var(--shadow-card); }
+img.bkly-property-card__image { width: 100%; object-fit: cover; display: block; }
+.bkly-property-card__name { font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.bkly-property-card__loc { font-size: 14px; color: var(--muted); margin-top: 2px; }
+@media (prefers-reduced-motion: reduce) { a.bkly-property-card { transition: none; } }
 
 /* ── Équipements ─────────────────────────────────────────────────────────── */
 .bkly-amenities { padding: 48px 40px; background: var(--card); }

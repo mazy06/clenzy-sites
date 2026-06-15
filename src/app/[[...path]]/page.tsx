@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { resolveSiteByHost, getPage } from '@/lib/api';
+import { resolveSiteByHost, getPage, listProperties } from '@/lib/api';
 import { BlockRenderer } from '@/lib/blocks';
 import { JsonLd, buildAlternates, resolveLocale, lodgingBusinessSchema, isHome } from '@/lib/seo';
 import ReservationWidget from '@/components/ReservationWidget';
@@ -50,11 +50,18 @@ export default async function Page(
   const page = await getPage(site.id, path, locale);
   if (!page) notFound();
 
+  // Vraies fiches dans le bloc grille (liens internes → /logement/{id}) : fetch seulement si la page
+  // en contient un, et si le site a un booking engine.
+  const apiKey = site.bookingEngineApiKey;
+  const properties = apiKey && page.blocks?.includes('propertyGrid')
+    ? await listProperties(apiKey)
+    : [];
+
   return (
     // `bkly-page` = contexte de container query (visibilité responsive par bloc, 2.5).
     <div className="bkly-page">
       {isHome(page) ? <JsonLd data={lodgingBusinessSchema(site, `https://${host}/`)} /> : null}
-      <BlockRenderer blocksJson={page.blocks} />
+      <BlockRenderer blocksJson={page.blocks} properties={properties} />
       {site.bookingEngineApiKey ? (
         <section id="reserver" className="bkly-reserve">
           <div className="bkly-reserve__title">Réservez votre séjour</div>

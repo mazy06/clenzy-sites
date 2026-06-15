@@ -1,4 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
+import Link from 'next/link';
+import { absoluteMedia, type ApiPropertySummary } from './api';
 
 /**
  * Rendu serveur des blocs composés (miroir du registre `bkly-*` du Studio). Le format est le même
@@ -74,7 +76,7 @@ const QuoteIcon = () => (
   </svg>
 );
 
-function renderBlock(b: Block, i: number): ReactNode {
+function renderBlock(b: Block, i: number, properties: ApiPropertySummary[]): ReactNode {
   const p = b.props ?? {};
   const style = sectionStyle(p);
   switch (b.type) {
@@ -95,21 +97,41 @@ function renderBlock(b: Block, i: number): ReactNode {
       );
     case 'propertyGrid': {
       const cols = Math.min(4, Math.max(1, Number(p.columns) || 3));
+      // Vraies propriétés (cartes cliquables → /logement/{id}) ; repli squelette si liste vide.
       return (
         <div key={i} className={cls('bkly-property-grid', p)} style={style}>
           <div className="bkly-property-grid__heading">{s(p.heading)}</div>
           {p.subheading ? <div className="bkly-property-grid__subheading">{s(p.subheading)}</div> : null}
           <div className="bkly-property-grid__list" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-            {Array.from({ length: cols }).map((_, k) => (
-              <div key={k} className="bkly-property-card">
-                <div className="bkly-property-card__image" />
-                <div className="bkly-property-card__body">
-                  <div className="bkly-property-card__line" />
-                  <div className="bkly-property-card__line bkly-property-card__line--sub" />
-                  <div className="bkly-property-card__price">120 € <span className="bkly-property-card__price-unit">/ nuit</span></div>
-                </div>
-              </div>
-            ))}
+            {properties.length > 0
+              ? properties.slice(0, 12).map((prop) => {
+                  const photo = absoluteMedia(prop.mainPhotoUrl);
+                  const loc = [prop.city, prop.country].filter(Boolean).join(', ');
+                  return (
+                    <Link key={prop.id} href={`/logement/${prop.id}`} className="bkly-property-card">
+                      {photo
+                        ? <img className="bkly-property-card__image" src={photo} alt={prop.name} loading="lazy" />
+                        : <div className="bkly-property-card__image" />}
+                      <div className="bkly-property-card__body">
+                        <div className="bkly-property-card__name">{prop.name}</div>
+                        {loc ? <div className="bkly-property-card__loc">{loc}</div> : null}
+                        {prop.priceFrom != null ? (
+                          <div className="bkly-property-card__price">{prop.priceFrom} {prop.currency} <span className="bkly-property-card__price-unit">/ nuit</span></div>
+                        ) : null}
+                      </div>
+                    </Link>
+                  );
+                })
+              : Array.from({ length: cols }).map((_, k) => (
+                  <div key={k} className="bkly-property-card">
+                    <div className="bkly-property-card__image" />
+                    <div className="bkly-property-card__body">
+                      <div className="bkly-property-card__line" />
+                      <div className="bkly-property-card__line bkly-property-card__line--sub" />
+                      <div className="bkly-property-card__price">120 € <span className="bkly-property-card__price-unit">/ nuit</span></div>
+                    </div>
+                  </div>
+                ))}
           </div>
         </div>
       );
@@ -267,7 +289,7 @@ function renderBlock(b: Block, i: number): ReactNode {
           <div className="bkly-columns__grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, gap }}>
             {Array.from({ length: n }).map((_, ci) => (
               <div key={ci} className="bkly-columns__col">
-                {(cols[ci] ?? []).map((child, k) => renderBlock(child, k))}
+                {(cols[ci] ?? []).map((child, k) => renderBlock(child, k, properties))}
               </div>
             ))}
           </div>
@@ -279,8 +301,13 @@ function renderBlock(b: Block, i: number): ReactNode {
   }
 }
 
-/** Parse + rend une liste de blocs depuis le JSON `pageLayout`/`SitePage.blocks`. */
-export function BlockRenderer({ blocksJson }: { blocksJson: string | null }) {
+/**
+ * Parse + rend une liste de blocs depuis le JSON `pageLayout`/`SitePage.blocks`. `properties` (si
+ * fourni) alimente le bloc `propertyGrid` en vraies fiches cliquables (sinon : squelette).
+ */
+export function BlockRenderer(
+  { blocksJson, properties = [] }: { blocksJson: string | null; properties?: ApiPropertySummary[] },
+) {
   let blocks: Block[] = [];
   if (blocksJson) {
     try {
@@ -290,5 +317,5 @@ export function BlockRenderer({ blocksJson }: { blocksJson: string | null }) {
       blocks = [];
     }
   }
-  return <>{blocks.map((b, i) => renderBlock(b, i))}</>;
+  return <>{blocks.map((b, i) => renderBlock(b, i, properties))}</>;
 }
