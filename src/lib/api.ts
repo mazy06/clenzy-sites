@@ -28,6 +28,10 @@ export interface SitePublic {
   seoOgImageUrl: string | null;
   bookingEngineConfigId: number | null;
   bookingEngineApiKey: string | null;
+  customCss: string | null;
+  customJs: string | null;
+  /** Composition de réservation (JSON `{widgetLayout,styleMode}`) — rendue par le SDK au montage. */
+  componentConfig: string | null;
   pages: PageSummary[];
 }
 

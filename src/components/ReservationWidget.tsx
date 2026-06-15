@@ -38,11 +38,17 @@ export default function ReservationWidget({
   primaryColor,
   currency,
   language,
+  componentConfig,
+  customCss,
 }: {
   apiKey: string;
   primaryColor?: string | null;
   currency?: string;
   language?: string;
+  /** Composition de micro-widgets (JSON) — le SDK la rend au lieu du formulaire par défaut. */
+  componentConfig?: string | null;
+  /** CSS custom de l'org — injecté dans le Shadow DOM du widget. */
+  customCss?: string | null;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -59,6 +65,9 @@ export default function ReservationWidget({
           theme: primaryColor ? { primaryColor } : undefined,
           currency: currency || 'EUR',
           language: (['fr', 'en', 'ar'].includes(language ?? '') ? language : 'fr'),
+          // Funnel modulaire : si une composition existe, le SDK la rend (sinon formulaire par défaut).
+          ...(componentConfig ? { componentConfig } : {}),
+          ...(customCss ? { customCss } : {}),
         });
       })
       .catch(() => {
@@ -68,7 +77,7 @@ export default function ReservationWidget({
       cancelled = true;
       widget?.destroy?.();
     };
-  }, [apiKey, primaryColor, currency, language]);
+  }, [apiKey, primaryColor, currency, language, componentConfig, customCss]);
 
   return <div ref={ref} />;
 }

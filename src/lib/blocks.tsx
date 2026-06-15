@@ -296,6 +296,33 @@ function renderBlock(b: Block, i: number, properties: ApiPropertySummary[]): Rea
         </div>
       );
     }
+    case 'bookingWidget': {
+      // Bloc de réservation posé sur la page : point d'entrée vers le widget interactif (#reserver).
+      // (Le funnel complet reste monté dans la section #reserver ; ce bloc y renvoie.)
+      const preset = s(p.preset) || 'searchBar';
+      const isSearch = preset === 'searchBar' || preset === 'searchFull';
+      const label = preset === 'propertyResults' ? 'Voir les logements'
+        : preset === 'cart' ? 'Voir le panier'
+        : preset === 'guestForm' ? 'Réserver'
+        : preset === 'account' ? 'Mon compte'
+        : preset === 'priceSummary' ? 'Voir le récapitulatif'
+        : 'Rechercher';
+      return (
+        <div key={i} className={cls('bkly-bookingwidget', p)} style={{ ...style, padding: '40px 24px' }}>
+          <div style={{ display: 'flex', justifyContent: p.align === 'left' ? 'flex-start' : p.align === 'right' ? 'flex-end' : 'center' }}>
+            {isSearch ? (
+              <a href="#reserver" className="bkly-hero__search">
+                <span className="bkly-hero__search-icon"><SearchIcon /></span>
+                <span className="bkly-hero__search-text">Quand souhaitez-vous partir ?</span>
+                <span className="bkly-hero__search-btn">{label}</span>
+              </a>
+            ) : (
+              <a href="#reserver" className="bkly-cta__button">{label}</a>
+            )}
+          </div>
+        </div>
+      );
+    }
     default:
       return null;
   }

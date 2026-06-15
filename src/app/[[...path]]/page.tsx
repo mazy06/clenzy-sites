@@ -69,6 +69,8 @@ export default async function Page(
             apiKey={site.bookingEngineApiKey}
             primaryColor={site.primaryColor}
             language={site.defaultLocale}
+            componentConfig={site.componentConfig}
+            customCss={site.customCss}
           />
         </section>
       ) : null}

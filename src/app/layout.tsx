@@ -6,6 +6,7 @@ import { buildThemeVars } from '@/lib/theme';
 import { buildNavModel } from '@/lib/nav';
 import SiteNav from '@/components/SiteNav';
 import SiteConcierge from '@/components/SiteConcierge';
+import { RawStyle, RawScript } from '@/lib/rawInject';
 
 // Le site dépend de l'hôte → rendu dynamique (résolution par requête).
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang={lang}>
       <body>
         <div style={site ? buildThemeVars(site) : undefined}>
+          {/* CSS custom du site (importé depuis le template / Studio) — injecté brut en tête. */}
+          {site?.customCss ? <RawStyle css={site.customCss} /> : null}
           {nav ? (
             <SiteNav
               brandName={nav.brandName}
@@ -31,6 +34,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           ) : null}
           {children}
           {site?.bookingEngineApiKey ? <SiteConcierge apiKey={site.bookingEngineApiKey} /> : null}
+          {/* JS custom du site — en fin de body (DOM prêt). */}
+          {site?.customJs ? <RawScript js={site.customJs} /> : null}
         </div>
       </body>
     </html>
