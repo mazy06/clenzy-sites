@@ -5,6 +5,7 @@ import { resolveSiteByHost } from '@/lib/api';
 import { buildThemeVars } from '@/lib/theme';
 import { buildNavModel } from '@/lib/nav';
 import SiteNav from '@/components/SiteNav';
+import SiteConcierge from '@/components/SiteConcierge';
 
 // Le site dépend de l'hôte → rendu dynamique (résolution par requête).
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             />
           ) : null}
           {children}
+          {site?.bookingEngineApiKey ? <SiteConcierge apiKey={site.bookingEngineApiKey} /> : null}
         </div>
       </body>
     </html>
