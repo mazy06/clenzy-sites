@@ -1,0 +1,9 @@
+# Dev : serveur Next.js avec HMR. Le code source est monté en volume (docker-compose.sites.dev.yml)
+# → toute modif locale est détectée (WATCHPACK_POLLING) sans rebuild du container.
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
