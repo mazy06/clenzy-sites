@@ -1,4 +1,5 @@
-import type { SitePublic, SitePagePublic, BlogPostPublic } from './api';
+import type { SitePublic, SitePagePublic, BlogPostPublic, ApiPropertyDetail } from './api';
+import { absoluteMedia } from './api';
 
 /**
  * Helpers SEO du SSR (P1.2) : JSON-LD (schema.org) + alternates hreflang. Le JSON-LD est rendu en
@@ -90,4 +91,41 @@ export function articleSchema(site: SitePublic, post: BlogPostPublic, url: strin
 /** Type d'une page : utilisé pour ne rendre LodgingBusiness que sur l'accueil. */
 export function isHome(page: SitePagePublic): boolean {
   return page.type === 'HOME' || page.path === '/';
+}
+
+/** schema.org/LodgingBusiness + Offer — fiche d'un hébergement (P1.2). */
+export function propertySchema(p: ApiPropertyDetail, url: string): Record<string, unknown> {
+  const data: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'LodgingBusiness',
+    name: p.name,
+    url,
+  };
+  if (p.description) data.description = p.description;
+  const images = (p.photos ?? []).map((ph) => absoluteMedia(ph.url)).filter((u): u is string => !!u);
+  if (images.length) data.image = images;
+  if (p.city || p.country) {
+    const address: Record<string, unknown> = { '@type': 'PostalAddress' };
+    if (p.city) address.addressLocality = p.city;
+    if (p.country) address.addressCountry = p.country;
+    data.address = address;
+  }
+  if (p.latitude != null && p.longitude != null) {
+    data.geo = { '@type': 'GeoCoordinates', latitude: p.latitude, longitude: p.longitude };
+  }
+  if (p.amenities && p.amenities.length) {
+    data.amenityFeature = p.amenities.map((a) => ({ '@type': 'LocationFeatureSpecification', name: a, value: true }));
+  }
+  if (p.maxGuests != null) data.occupancy = { '@type': 'QuantitativeValue', maxValue: p.maxGuests };
+  if (p.bedroomCount != null) data.numberOfRooms = p.bedroomCount;
+  if (p.nightlyPrice != null) {
+    data.makesOffer = {
+      '@type': 'Offer',
+      price: p.nightlyPrice,
+      priceCurrency: p.currency || 'EUR',
+      availability: 'https://schema.org/InStock',
+    };
+    data.priceRange = `${p.nightlyPrice} ${p.currency || 'EUR'}`;
+  }
+  return data;
 }

@@ -110,3 +110,78 @@ export function parseTokens(json: string | null): Record<string, string> | null 
     return null;
   }
 }
+
+// ─── Hébergements (API publique du Booking Engine, X-Booking-Key) ──────────────
+// Détail-propriété SSR (P1.2) : on consomme l'API booking publique côté serveur (clé du site).
+
+/** Base media (photos servies par le PMS) — les URLs renvoyées sont relatives, à rendre absolues. */
+export const MEDIA_BASE = (process.env.NEXT_PUBLIC_WIDGET_BASE_URL ?? 'https://app.clenzy.fr').replace(/\/$/, '');
+
+/** Rend une URL média absolue (http(s) tel quel, sinon préfixée par MEDIA_BASE). */
+export function absoluteMedia(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${MEDIA_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+export interface ApiPropertySummary {
+  id: number;
+  name: string;
+  city: string | null;
+  country: string | null;
+  priceFrom: number | null;
+  currency: string;
+  mainPhotoUrl: string | null;
+}
+
+export interface ApiPropertyPhoto {
+  id: number;
+  url: string;
+  caption: string | null;
+}
+
+export interface ApiPropertyDetail {
+  id: number;
+  name: string;
+  description: string | null;
+  type: string | null;
+  city: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  bedroomCount: number | null;
+  bathroomCount: number | null;
+  maxGuests: number | null;
+  squareMeters: number | null;
+  nightlyPrice: number | null;
+  minimumNights: number | null;
+  currency: string;
+  photos: ApiPropertyPhoto[];
+  amenities: string[] | null;
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  host: { firstName: string | null; lastInitial: string | null; profilePictureUrl: string | null } | null;
+}
+
+async function getBookingJson<T>(apiKey: string, path: string, revalidate: number): Promise<T | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/public/booking/widget${path}`, {
+      headers: { 'X-Booking-Key': apiKey },
+      next: { revalidate },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Liste des hébergements publics du site (pour le sitemap + liens internes). */
+export async function listProperties(apiKey: string): Promise<ApiPropertySummary[]> {
+  return (await getBookingJson<ApiPropertySummary[]>(apiKey, '/properties', 600)) ?? [];
+}
+
+/** Détail d'un hébergement (description, photos, équipements, géo…). */
+export function getPropertyDetail(apiKey: string, id: string | number): Promise<ApiPropertyDetail | null> {
+  return getBookingJson<ApiPropertyDetail>(apiKey, `/properties/${encodeURIComponent(String(id))}`, 300);
+}
