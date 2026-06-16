@@ -2,9 +2,11 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { resolveSiteByHost, getPage, listProperties } from '@/lib/api';
-import { BlockRenderer } from '@/lib/blocks';
+import { BlockRenderer, GrapesPageRenderer } from '@/lib/blocks';
+import { detectPageContent } from '@/lib/pageContent';
 import { JsonLd, buildAlternates, resolveLocale, lodgingBusinessSchema, isHome } from '@/lib/seo';
 import ReservationWidget from '@/components/ReservationWidget';
+import BookingSDKBootstrap from '@/components/BookingSDKBootstrap';
 
 export const revalidate = 300; // ISR
 
@@ -50,10 +52,15 @@ export default async function Page(
   const page = await getPage(site.id, path, locale);
   if (!page) notFound();
 
-  // Vraies fiches dans le bloc grille (liens internes → /logement/{id}) : fetch seulement si la page
-  // en contient un, et si le site a un booking engine.
+  // Détection du format de la page : GrapesJS (HTML+CSS extraits) vs legacy (liste de blocs).
+  const content = detectPageContent(page.blocks);
+  const isGrapes = content?.kind === 'grapes';
+
+  // Vraies fiches dans le bloc grille (liens internes → /logement/{id}) : fetch seulement pour une
+  // page legacy qui contient `propertyGrid`, et si le site a un booking engine. Une page GrapesJS
+  // n'a pas de bloc `propertyGrid` → 0 fetch.
   const apiKey = site.bookingEngineApiKey;
-  const properties = apiKey && page.blocks?.includes('propertyGrid')
+  const properties = !isGrapes && apiKey && page.blocks?.includes('propertyGrid')
     ? await listProperties(apiKey)
     : [];
 
@@ -61,8 +68,36 @@ export default async function Page(
     // `bkly-page` = contexte de container query (visibilité responsive par bloc, 2.5).
     <div className="bkly-page">
       {isHome(page) ? <JsonLd data={lodgingBusinessSchema(site, `https://${host}/`)} /> : null}
-      <BlockRenderer blocksJson={page.blocks} properties={properties} />
-      {site.bookingEngineApiKey ? (
+      {isGrapes ? (
+        // Page GrapesJS : HTML assaini + CSS scopé. Le SDK hydrate ensuite les marqueurs
+        // `data-clenzy-widget` présents dans ce HTML (voir BookingSDKBootstrap plus bas).
+        <GrapesPageRenderer html={content.html} css={content.css} />
+      ) : (
+        <BlockRenderer
+          blocksJson={page.blocks}
+          properties={properties}
+          widget={{
+            apiKey: site.bookingEngineApiKey,
+            componentConfig: site.componentConfig,
+            primaryColor: site.primaryColor,
+            language: site.defaultLocale,
+            leadCapture: site.leadCapturePopupEnabled,
+          }}
+        />
+      )}
+      {/* Hydratation des marqueurs `data-clenzy-widget` du HTML GrapesJS (idempotent, page GrapesJS seule). */}
+      {isGrapes && site.bookingEngineApiKey ? (
+        <BookingSDKBootstrap
+          apiKey={site.bookingEngineApiKey}
+          primaryColor={site.primaryColor}
+          language={site.defaultLocale}
+          componentConfig={site.componentConfig}
+          leadCapture={site.leadCapturePopupEnabled}
+        />
+      ) : null}
+      {/* Embed monolithe (#reserver) UNIQUEMENT sur les pages legacy : une page GrapesJS utilise les
+          marqueurs hydratés (BookingSDKBootstrap ci-dessus) → évite un DOUBLE montage du widget. */}
+      {!isGrapes && site.bookingEngineApiKey ? (
         <section id="reserver" className="bkly-reserve">
           <div className="bkly-reserve__title">Réservez votre séjour</div>
           <ReservationWidget
@@ -71,6 +106,7 @@ export default async function Page(
             language={site.defaultLocale}
             componentConfig={site.componentConfig}
             customCss={site.customCss}
+            leadCapture={site.leadCapturePopupEnabled}
           />
         </section>
       ) : null}

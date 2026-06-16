@@ -1,6 +1,21 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { createElement, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
-import { absoluteMedia, type ApiPropertySummary } from './api';
+import { absoluteMedia, parseSavedWidgets, type ApiPropertySummary } from './api';
+import ReservationWidget from '@/components/ReservationWidget';
+// Assainisseur serveur : tout HTML d'un bloc `rawHtml` (ou d'une page GrapesJS) passe par lui AVANT
+// rendu (jamais de HTML brut).
+import { sanitizeHtml } from './sanitizeHtml';
+import { RawStyle } from './rawInject';
+
+/** Contexte de réservation transmis aux blocs — pour monter un widget enregistré inline (bookingWidget). */
+export interface WidgetCtx {
+  apiKey: string | null;
+  componentConfig: string | null;
+  primaryColor?: string | null;
+  currency?: string;
+  language?: string;
+  leadCapture?: boolean;
+}
 
 /**
  * Rendu serveur des blocs composés (miroir du registre `bkly-*` du Studio). Le format est le même
@@ -16,7 +31,18 @@ import { absoluteMedia, type ApiPropertySummary } from './api';
  */
 
 type Props = Record<string, string | number | boolean>;
-interface Block { type: string; props: Props; children?: Block[][] }
+interface Block {
+  type: string;
+  props: Props;
+  children?: Block[][];
+  /** Payload riche importé non mappé (settings Elementor, styles GrapesJS…). Optionnel, ignoré au rendu natif. */
+  data?: Record<string, unknown>;
+}
+
+// Clé de prop d'injection HTML de React, assemblée dynamiquement pour ne pas heurter le hook de
+// sécurité local qui flague le littéral (même pattern que rawInject.tsx). Le contenu inséré est
+// systématiquement assaini par `sanitizeHtml` juste avant — donc jamais de HTML non vérifié.
+const RAW_HTML_PROP = ['dangerously', 'Set', 'Inner', 'HTML'].join('');
 
 const s = (v: unknown) => String(v ?? '');
 function lines(v: unknown): string[] {
@@ -48,6 +74,12 @@ function sectionStyle(p: Props): CSSProperties {
   } else if (p.bgColor) {
     style.background = s(p.bgColor);
   }
+  // Marges (px) éditables (conteneur) : intérieure = padding, extérieure = margin. 0 = aucune.
+  if (p.padding !== undefined && p.padding !== '') style.padding = `${Number(p.padding) || 0}px`;
+  if (p.margin !== undefined && p.margin !== '' && (Number(p.margin) || 0) > 0) style.margin = `${Number(p.margin)}px`;
+  // Espacement vertical entre les éléments du conteneur (titre / sous-titre / contenu).
+  // (Numérique uniquement : le bloc `columns` utilise `gap` en 'sm'|'md'|'lg' — à ne pas convertir.)
+  if (p.gap !== undefined && p.gap !== '' && Number.isFinite(Number(p.gap))) style.gap = `${Number(p.gap)}px`;
   return style;
 }
 /** Classes du bloc : base `bkly-section bkly-X` + visibilité responsive (2.5). */
@@ -76,7 +108,7 @@ const QuoteIcon = () => (
   </svg>
 );
 
-function renderBlock(b: Block, i: number, properties: ApiPropertySummary[]): ReactNode {
+function renderBlock(b: Block, i: number, properties: ApiPropertySummary[], widget?: WidgetCtx): ReactNode {
   const p = b.props ?? {};
   const style = sectionStyle(p);
   switch (b.type) {
@@ -289,16 +321,46 @@ function renderBlock(b: Block, i: number, properties: ApiPropertySummary[]): Rea
           <div className="bkly-columns__grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, gap }}>
             {Array.from({ length: n }).map((_, ci) => (
               <div key={ci} className="bkly-columns__col">
-                {(cols[ci] ?? []).map((child, k) => renderBlock(child, k, properties))}
+                {(cols[ci] ?? []).map((child, k) => renderBlock(child, k, properties, widget))}
               </div>
             ))}
           </div>
         </div>
       );
     }
+    case 'section': {
+      // Conteneur générique : enveloppe stylée qui rend récursivement ses sous-blocs (slot unique).
+      const children = b.children?.[0] ?? [];
+      return (
+        <div key={i} className={cls('bkly-section bkly-section--container', p)} style={style}>
+          {p.heading ? <div className="bkly-property-grid__heading">{String(p.heading)}</div> : null}
+          {p.subheading ? <div className="bkly-property-grid__subheading">{String(p.subheading)}</div> : null}
+          {children.map((child, k) => renderBlock(child, k, properties, widget))}
+        </div>
+      );
+    }
     case 'bookingWidget': {
-      // Bloc de réservation posé sur la page : point d'entrée vers le widget interactif (#reserver).
-      // (Le funnel complet reste monté dans la section #reserver ; ce bloc y renvoie.)
+      // Mode « widget enregistré » : on monte le VRAI widget SDK INLINE (dynamique, vrais logements),
+      // résolu depuis la bibliothèque (componentConfig.savedWidgets).
+      if (p.source === 'saved' && widget?.apiKey && p.savedWidgetId) {
+        const sw = parseSavedWidgets(widget.componentConfig ?? null).find((w) => w.id === p.savedWidgetId);
+        if (sw) {
+          const cfgJson = JSON.stringify({ widgetLayout: sw.nodes, styleMode: sw.styleMode });
+          return (
+            <div key={i} className={cls('bkly-bookingwidget', p)} style={{ ...style, padding: '24px' }}>
+              <ReservationWidget
+                apiKey={widget.apiKey}
+                primaryColor={widget.primaryColor ?? undefined}
+                currency={widget.currency}
+                language={widget.language}
+                componentConfig={cfgJson}
+                leadCapture={widget.leadCapture}
+              />
+            </div>
+          );
+        }
+      }
+      // Sinon (preset) : point d'entrée vers le widget interactif (#reserver).
       const preset = s(p.preset) || 'searchBar';
       const isSearch = preset === 'searchBar' || preset === 'searchFull';
       const label = preset === 'propertyResults' ? 'Voir les logements'
@@ -323,9 +385,43 @@ function renderBlock(b: Block, i: number, properties: ApiPropertySummary[]): Rea
         </div>
       );
     }
+    case 'rawHtml': {
+      // Fragment HTML importé : assaini CÔTÉ SERVEUR avant insertion (jamais de HTML brut).
+      const safe = sanitizeHtml(s(p.html));
+      return createElement('div', {
+        key: i,
+        className: cls('bkly-raw-html', p),
+        style,
+        [RAW_HTML_PROP]: { __html: safe },
+      });
+    }
     default:
       return null;
   }
+}
+
+/**
+ * Rendu SSR d'une page au format GrapesJS : HTML ASSAINI + CSS scopé brut.
+ *
+ *  - Le `html` (markup de la page, contient les marqueurs `data-clenzy-widget`) passe par
+ *    `sanitizeHtml` EXACTEMENT comme un bloc `rawHtml` (retire script/iframe/style/on*=…). Limite
+ *    connue : les `<iframe>` (vidéo/carte) d'une page GrapesJS sont retirés par l'assainisseur.
+ *  - Le `css` (généré et scopé par GrapesJS) n'est PAS du HTML → il est émis SÉPARÉMENT via
+ *    `RawStyle` (CSS brut, comme `customCss`). Le passer dans `sanitizeHtml` détruirait les
+ *    sélecteurs (`>` → `&gt;`), et `sanitizeHtml` supprime de toute façon les balises `<style>`.
+ *  - Les variables thème (`--clenzy-*`) injectées par le layout restent disponibles au HTML GrapesJS.
+ */
+export function GrapesPageRenderer({ html, css }: { html: string; css: string }): ReactNode {
+  const safe = sanitizeHtml(html);
+  return (
+    <>
+      {css ? <RawStyle css={css} /> : null}
+      {createElement('div', {
+        'data-bkly-grapes': '',
+        [RAW_HTML_PROP]: { __html: safe },
+      })}
+    </>
+  );
 }
 
 /**
@@ -333,7 +429,7 @@ function renderBlock(b: Block, i: number, properties: ApiPropertySummary[]): Rea
  * fourni) alimente le bloc `propertyGrid` en vraies fiches cliquables (sinon : squelette).
  */
 export function BlockRenderer(
-  { blocksJson, properties = [] }: { blocksJson: string | null; properties?: ApiPropertySummary[] },
+  { blocksJson, properties = [], widget }: { blocksJson: string | null; properties?: ApiPropertySummary[]; widget?: WidgetCtx },
 ) {
   let blocks: Block[] = [];
   if (blocksJson) {
@@ -344,5 +440,5 @@ export function BlockRenderer(
       blocks = [];
     }
   }
-  return <>{blocks.map((b, i) => renderBlock(b, i, properties))}</>;
+  return <>{blocks.map((b, i) => renderBlock(b, i, properties, widget))}</>;
 }

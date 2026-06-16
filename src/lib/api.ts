@@ -32,7 +32,28 @@ export interface SitePublic {
   customJs: string | null;
   /** Composition de réservation (JSON `{widgetLayout,styleMode}`) — rendue par le SDK au montage. */
   componentConfig: string | null;
+  /** Popup exit-intent (opt-in, org-level) — le SDK affiche le popup de capture de leads si true. */
+  leadCapturePopupEnabled: boolean;
   pages: PageSummary[];
+}
+
+/** Widget réutilisable enregistré (vit dans `componentConfig.savedWidgets`, inséré dans les pages). */
+export interface SavedWidget {
+  id: string;
+  name: string;
+  nodes: unknown[];
+  styleMode: 'template' | 'none';
+}
+
+/** Extrait les widgets enregistrés du JSON `componentConfig` (vide si absent/illisible). */
+export function parseSavedWidgets(componentConfig: string | null): SavedWidget[] {
+  if (!componentConfig) return [];
+  try {
+    const a = (JSON.parse(componentConfig) as { savedWidgets?: unknown }).savedWidgets;
+    return Array.isArray(a) ? (a as SavedWidget[]).filter((w) => w && typeof w.id === 'string' && Array.isArray(w.nodes)) : [];
+  } catch {
+    return [];
+  }
 }
 
 export interface SitePagePublic {

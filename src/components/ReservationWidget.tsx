@@ -11,7 +11,12 @@ import { useEffect, useRef } from 'react';
 interface BaitlyHandle { destroy?: () => void }
 declare global {
   interface Window {
-    BaitlyBooking?: { init: (config: Record<string, unknown>) => BaitlyHandle };
+    // `init` = montage MONOLITHE mono-conteneur (ce composant). `hydrate` = montage multi-marqueurs
+    // `data-clenzy-widget` d'une page GrapesJS (BookingSDKBootstrap). Une seule déclaration globale.
+    BaitlyBooking?: {
+      init: (config: Record<string, unknown>) => BaitlyHandle;
+      hydrate?: (config: Record<string, unknown>) => BaitlyHandle;
+    };
   }
 }
 
@@ -40,6 +45,7 @@ export default function ReservationWidget({
   language,
   componentConfig,
   customCss,
+  leadCapture,
 }: {
   apiKey: string;
   primaryColor?: string | null;
@@ -49,6 +55,8 @@ export default function ReservationWidget({
   componentConfig?: string | null;
   /** CSS custom de l'org — injecté dans le Shadow DOM du widget. */
   customCss?: string | null;
+  /** Popup exit-intent (opt-in) — affiché par le SDK uniquement si true. */
+  leadCapture?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -68,6 +76,8 @@ export default function ReservationWidget({
           // Funnel modulaire : si une composition existe, le SDK la rend (sinon formulaire par défaut).
           ...(componentConfig ? { componentConfig } : {}),
           ...(customCss ? { customCss } : {}),
+          // Popup exit-intent : opt-in (off par défaut côté SDK).
+          ...(leadCapture ? { leadCapture: true } : {}),
         });
       })
       .catch(() => {
@@ -77,7 +87,7 @@ export default function ReservationWidget({
       cancelled = true;
       widget?.destroy?.();
     };
-  }, [apiKey, primaryColor, currency, language, componentConfig, customCss]);
+  }, [apiKey, primaryColor, currency, language, componentConfig, customCss, leadCapture]);
 
   return <div ref={ref} />;
 }

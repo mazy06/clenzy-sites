@@ -100,7 +100,7 @@ body {
 }
 .bkly-nav__toggle-bar { display: block; width: 18px; height: 2px; margin: 0 auto; background: var(--ink); border-radius: 2px; }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .bkly-nav__toggle { display: flex; }
   .bkly-nav__menu {
     position: absolute;
@@ -296,6 +296,12 @@ img.bkly-property-card__image { width: 100%; object-fit: cover; display: block; 
 @container (max-width: 600px) {
   .bkly-columns__grid { grid-template-columns: 1fr !important; }
 }
+
+/* ── Conteneur / Section (2.8) : padding/margin pilotés par les props (inline via sectionStyle). ── */
+.bkly-section--container { display: flex; flex-direction: column; gap: 16px; }
+.bkly-section--container > .bkly-section { padding-left: 0; padding-right: 0; }
+.bkly-section--container > .bkly-property-grid__heading,
+.bkly-section--container > .bkly-property-grid__subheading { margin: 0; }
 
 /* ── Visibilité responsive par bloc (2.5) — container queries ────────────────
  * `.bkly-page` établit le contexte de container ; le masquage suit la largeur RÉELLE
