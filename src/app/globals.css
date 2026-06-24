@@ -447,3 +447,13 @@ img.bkly-property-card__image { width: 100%; object-fit: cover; display: block; 
 @media (prefers-reduced-motion: reduce) {
   .bkly-concierge__bubble, .bkly-concierge__send { transition: none; }
 }
+
+/* ── Sélecteur de langue (nav du site publié) ─────────────────────────────── */
+.bkly-lang { display: inline-flex; align-items: center; gap: 2px; margin-inline-start: 8px; }
+.bkly-lang__item {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em; line-height: 1;
+  padding: 5px 8px; border-radius: 6px; text-decoration: none;
+  color: var(--muted, #6b7780); transition: color 0.15s ease, background 0.15s ease;
+}
+.bkly-lang__item:hover { color: var(--ink); background: var(--accent-soft); }
+.bkly-lang__item--active { color: var(--accent); background: var(--accent-soft); }

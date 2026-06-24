@@ -65,8 +65,9 @@ export default async function Page(
     : [];
 
   return (
-    // `bkly-page` = contexte de container query (visibilité responsive par bloc, 2.5).
-    <div className="bkly-page">
+    // `bkly-page` = contexte de container query (visibilité responsive par bloc, 2.5). `dir` suit la
+    // locale résolue (RTL pour l'arabe) ; le widget est monté dans CETTE langue (pas la langue par défaut).
+    <div className="bkly-page" dir={locale === 'ar' ? 'rtl' : undefined}>
       {isHome(page) ? <JsonLd data={lodgingBusinessSchema(site, `https://${host}/`)} /> : null}
       {isGrapes ? (
         // Page GrapesJS : HTML assaini + CSS scopé. Le SDK hydrate ensuite les marqueurs
@@ -80,7 +81,7 @@ export default async function Page(
             apiKey: site.bookingEngineApiKey,
             componentConfig: site.componentConfig,
             primaryColor: site.primaryColor,
-            language: site.defaultLocale,
+            language: locale,
             leadCapture: site.leadCapturePopupEnabled,
           }}
         />
@@ -90,7 +91,7 @@ export default async function Page(
         <BookingSDKBootstrap
           apiKey={site.bookingEngineApiKey}
           primaryColor={site.primaryColor}
-          language={site.defaultLocale}
+          language={locale}
           componentConfig={site.componentConfig}
           leadCapture={site.leadCapturePopupEnabled}
         />
@@ -103,7 +104,7 @@ export default async function Page(
           <ReservationWidget
             apiKey={site.bookingEngineApiKey}
             primaryColor={site.primaryColor}
-            language={site.defaultLocale}
+            language={locale}
             componentConfig={site.componentConfig}
             customCss={site.customCss}
             leadCapture={site.leadCapturePopupEnabled}

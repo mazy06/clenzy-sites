@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import LanguageSwitcher from './LanguageSwitcher';
 
 export interface SiteNavItem {
   path: string;
@@ -17,6 +18,10 @@ interface SiteNavProps {
   /** Lien vers le widget de réservation (ancre #reserver), ou null si pas de booking engine. */
   reserveHref: string | null;
   reserveLabel: string;
+  /** Langues du site (défaut + variantes) — affiche un sélecteur de langue si ≥ 2. */
+  locales: string[];
+  /** Langue par défaut (servie sans `?lang=`). */
+  defaultLocale: string;
 }
 
 /**
@@ -25,7 +30,7 @@ interface SiteNavProps {
  * component pour `usePathname()` (surlignage de la page courante) et le menu mobile ; les données
  * proviennent du layout serveur (site déjà résolu par hôte).
  */
-export default function SiteNav({ brandName, logoUrl, homePath, items, reserveHref, reserveLabel }: SiteNavProps) {
+export default function SiteNav({ brandName, logoUrl, homePath, items, reserveHref, reserveLabel, locales, defaultLocale }: SiteNavProps) {
   const pathname = usePathname() || '/';
   const [open, setOpen] = useState(false);
 
@@ -76,6 +81,7 @@ export default function SiteNav({ brandName, logoUrl, homePath, items, reserveHr
               {reserveLabel}
             </Link>
           ) : null}
+          <LanguageSwitcher locales={locales} defaultLocale={defaultLocale} />
         </nav>
       </div>
     </header>

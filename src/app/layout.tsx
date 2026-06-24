@@ -16,8 +16,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const site = await resolveSiteByHost(host);
   const lang = site?.defaultLocale || 'fr';
   const nav = site ? buildNavModel(site) : null;
+  // Langues du site (défaut + variantes déclarées), dédupliquées — alimente le sélecteur de langue.
+  const locales = Array.from(new Set([
+    lang,
+    ...(site?.locales || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
+  ]));
+  // `dir` par défaut côté serveur (le sélecteur l'ajuste ensuite selon `?lang=`).
   return (
-    <html lang={lang}>
+    <html lang={lang} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <body>
         <div style={site ? buildThemeVars(site) : undefined}>
           {/* CSS custom du site (importé depuis le template / Studio) — injecté brut en tête. */}
@@ -30,6 +36,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               items={nav.items}
               reserveHref={nav.reserveHref}
               reserveLabel={nav.reserveLabel}
+              locales={locales}
+              defaultLocale={lang}
             />
           ) : null}
           {children}
