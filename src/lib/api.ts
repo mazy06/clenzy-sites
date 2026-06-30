@@ -103,6 +103,17 @@ async function getJson<T>(url: string, revalidate: number): Promise<T | null> {
   }
 }
 
+/**
+ * Hostname effectif. En DEV uniquement, un paramètre `?host=<slug>.clenzy.site` (ou l'env
+ * `DEV_FORCE_HOST`) prend le pas sur l'en-tête `Host` → permet de prévisualiser un site en local
+ * (`localhost:3002`) sans configurer `/etc/hosts`. En production, l'en-tête `Host` fait foi.
+ */
+export function effectiveHost(headerHost: string, forced?: string | string[]): string {
+  if (process.env.NODE_ENV === 'production') return headerHost;
+  const q = Array.isArray(forced) ? forced[0] : forced;
+  return (q && q.trim()) || process.env.DEV_FORCE_HOST || headerHost;
+}
+
 /** Résout le site servi pour un hostname (sous-domaine ou domaine custom). */
 export function resolveSiteByHost(hostname: string): Promise<SitePublic | null> {
   return getJson<SitePublic>(`/api/public/sites/resolve?hostname=${encodeURIComponent(hostname)}`, 60);

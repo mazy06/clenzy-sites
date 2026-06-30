@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { resolveSiteByHost, getPage, listProperties } from '@/lib/api';
+import { resolveSiteByHost, getPage, listProperties, effectiveHost } from '@/lib/api';
 import { BlockRenderer, GrapesPageRenderer } from '@/lib/blocks';
 import { detectPageContent } from '@/lib/pageContent';
 import { JsonLd, buildAlternates, resolveLocale, lodgingBusinessSchema, isHome } from '@/lib/seo';
@@ -19,7 +19,7 @@ function pathFromParams(params: { path?: string[] }): string {
 export async function generateMetadata(
   { params, searchParams }: { params: { path?: string[] }; searchParams: SearchParams },
 ): Promise<Metadata> {
-  const host = headers().get('host') ?? '';
+  const host = effectiveHost(headers().get('host') ?? '', searchParams.host);
   const site = await resolveSiteByHost(host);
   if (!site) return {};
   const path = pathFromParams(params);
@@ -44,7 +44,7 @@ export async function generateMetadata(
 export default async function Page(
   { params, searchParams }: { params: { path?: string[] }; searchParams: SearchParams },
 ) {
-  const host = headers().get('host') ?? '';
+  const host = effectiveHost(headers().get('host') ?? '', searchParams.host);
   const site = await resolveSiteByHost(host);
   if (!site) notFound();
   const path = pathFromParams(params);
