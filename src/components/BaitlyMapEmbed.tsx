@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import maplibregl, { type StyleSpecification } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import type { StyleSpecification } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -23,6 +24,9 @@ let runtimeReady = false;
 function ensureRuntime() {
   if (runtimeReady) return;
   runtimeReady = true;
+  // MapLibre 6 : worker publié en statique par scripts/copy-maplibre-worker.mjs ;
+  // la version en paramètre évite qu'un navigateur garde le worker d'une autre release.
+  maplibregl.setWorkerUrl(`${window.location.origin}/maplibre/maplibre-gl-worker.mjs?v=${maplibregl.getVersion()}`);
   maplibregl.addProtocol('pmtiles', new Protocol().tile);
   if (maplibregl.getRTLTextPluginStatus() === 'unavailable') {
     void maplibregl.setRTLTextPlugin(`${window.location.origin}/maps/assets/rtl/mapbox-gl-rtl-text.js`, true).catch(() => {
