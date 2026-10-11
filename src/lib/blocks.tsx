@@ -2,6 +2,8 @@ import { createElement, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import { absoluteMedia, parseSavedWidgets, type ApiPropertySummary } from './api';
 import ReservationWidget from '@/components/ReservationWidget';
+import BaitlyMapEmbed from '@/components/BaitlyMapLazy';
+import { geocodeAddress } from './geocode';
 // Assainisseur serveur : tout HTML d'un bloc `rawHtml` (ou d'une page GrapesJS) passe par lui AVANT
 // rendu (jamais de HTML brut).
 import { sanitizeHtml } from './sanitizeHtml';
@@ -107,6 +109,17 @@ const QuoteIcon = () => (
     <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
   </svg>
 );
+
+/**
+ * Carte Baitly du bloc « map » (remplace l'iframe Google Maps) : l'adresse est
+ * géocodée côté serveur (en cache), la carte interactive se monte côté client.
+ * Adresse introuvable : on l'affiche en clair plutôt qu'une carte fausse.
+ */
+async function MapBlockCanvas({ address, language }: { address: string; language?: string }) {
+  const point = await geocodeAddress(address);
+  if (!point) return <div className="bkly-map__placeholder">{address}</div>;
+  return <BaitlyMapEmbed lat={point.lat} lng={point.lng} label={address} language={language} />;
+}
 
 function renderBlock(b: Block, i: number, properties: ApiPropertySummary[], widget?: WidgetCtx): ReactNode {
   const p = b.props ?? {};
@@ -272,8 +285,7 @@ function renderBlock(b: Block, i: number, properties: ApiPropertySummary[], widg
           {p.heading ? <div className="bkly-map__heading">{s(p.heading)}</div> : null}
           <div className="bkly-map__frame">
             {addr ? (
-              <iframe className="bkly-map__iframe" title="Carte" loading="lazy"
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(addr)}&output=embed`} />
+              <MapBlockCanvas address={addr} language={widget?.language} />
             ) : (
               <div className="bkly-map__placeholder">Adresse non configurée</div>
             )}
