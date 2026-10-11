@@ -26,6 +26,8 @@ Pour tester un site : créer un `Site` PUBLISHED + une `SitePage(HOME, PUBLISHED
 | Var | Rôle |
 |---|---|
 | `CLENZY_API_BASE_URL` | URL interne du backend (server-side only). |
+| `BAITLY_MAPS_ORIGIN` | Stockage public des cartes Baitly, relayé sous `/maps/` (lu au build). Défaut : `https://baitly-cartes.s3.gra.io.cloud.ovh.net/maps`. |
+| `BAITLY_GEOCODER_URL` | Géocodeur des adresses du bloc carte (côté serveur, cache 30 jours). Défaut : Nominatim. |
 | `CLENZY_SITES_BASE_DOMAIN` | Suffixe sous-domaines (`clenzy.site`). |
 | `NEXT_PUBLIC_WIDGET_BASE_URL` | Base API publique pour le widget de réservation client. |
 
